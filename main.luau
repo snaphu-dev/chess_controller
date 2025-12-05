@@ -165,8 +165,8 @@ local function movePiecePhysical(uniqueId, endPos)
             local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
             local goal = {Position = newWorldPos};
             ts:Create(part, tweenInfo, goal):Play();
-        end;
-    end;
+        end
+    end
 end;
 
 MoveEvent.OnServerEvent:Connect(function(player, startPos, endPos)
