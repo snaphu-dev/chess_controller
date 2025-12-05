@@ -59,11 +59,10 @@ local function findTargetPart(uniqueId)
     return ChessPiecesFolder:FindFirstChild(uniqueId);
 end;
 
-local function boardPositionToWorldPosition(pos)
+local function getBoardSquarePart(pos)
     local fileChar = string.char(string.byte('A') + pos.file - 1);
     local squareName = fileChar .. tostring(pos.rank);
-    local squarePart = BoardFolder:FindFirstChild(squareName);
-    return squarePart and squarePart.Position or nil;
+    return BoardFolder:FindFirstChild(squareName);
 end;
 
 local function isPathClear(startPos, endPos)
@@ -76,11 +75,10 @@ local function isPathClear(startPos, endPos)
     local currRank = startPos.rank + stepRank;
 
     while (currFile ~= endPos.file) or (currRank ~= endPos.rank) do
-        if board[currFile][currRank] ~= nil then return false; end
+        if board[currFile][currRank] ~= nil then return false; end;
         currFile = currFile + stepFile;
         currRank = currRank + stepRank;
     end;
-    
     return true;
 end;
 
@@ -94,40 +92,40 @@ local function isValidMove(startPos, endPos, piece)
 
     if targetPiece and targetPiece.color == piece.color then
         return false;
-    end
-    
+    end;
+
     if piece.pieceType == "Rook" then
         if dx == 0 or dy == 0 then
             return isPathClear(startPos, endPos);
-        end
+        end;
 
     elseif piece.pieceType == "Bishop" then
         if dx == dy then
             return isPathClear(startPos, endPos);
-        end
+        end;
 
     elseif piece.pieceType == "Queen" then
         if (dx == 0 or dy == 0) or (dx == dy) then
             return isPathClear(startPos, endPos);
-        end
+        end;
 
     elseif piece.pieceType == "Knight" then
         if (dx == 1 and dy == 2) or (dx == 2 and dy == 1) then
             return true;
-        end
+        end;
 
     elseif piece.pieceType == "King" then
         if dx <= 1 and dy <= 1 then
             return true;
-        end
+        end;
 
         if not piece.hasMoved and dy == 0 and dx == 2 then
             local rookFile = (dFileRaw > 0) and 8 or 1;
             local rookPiece = board[rookFile][startPos.rank];
             if rookPiece and rookPiece.pieceType == "Rook" and not rookPiece.hasMoved then
                 return isPathClear(startPos, {file = rookFile, rank = startPos.rank});
-            end
-        end
+            end;
+        end;
 
     elseif piece.pieceType == "Pawn" then
         local direction = (piece.color == "White") and 1 or -1;
@@ -136,48 +134,49 @@ local function isValidMove(startPos, endPos, piece)
         if dx == 0 then 
             if dRankRaw == direction then
                 return targetPiece == nil;
-            end
+            end;
             if dRankRaw == (direction * 2) and startPos.rank == startRank then
                 return targetPiece == nil and board[startPos.file][startPos.rank + direction] == nil;
-            end
+            end;
         elseif dx == 1 and dRankRaw == direction then
             if targetPiece and targetPiece.color ~= piece.color then
                 return true;
-            end
+            end;
             if not targetPiece and lastMove.piece and lastMove.piece.pieceType == "Pawn" then
                 if lastMove.endPos.rank == startPos.rank and lastMove.endPos.file == endPos.file then
                     if math.abs(lastMove.startPos.rank - lastMove.endPos.rank) == 2 then
                         return true;
-                    end
-                end
-            end
-        end
-    end
+                    end;
+                end;
+            end;
+        end;
+    end;
 
     return false;
 end;
 
 local function movePiecePhysical(uniqueId, endPos)
     local part = findTargetPart(uniqueId);
-    if part then
-        local newWorldPos = boardPositionToWorldPosition(endPos);
-        if newWorldPos then
-            local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
-            local goal = {Position = newWorldPos};
-            ts:Create(part, tweenInfo, goal):Play();
-        end
-    end
+    local squarePart = getBoardSquarePart(endPos);
+
+    if part and squarePart then
+        local newWorldPos = Vector3.new(squarePart.Position.X, part.Position.Y, squarePart.Position.Z);
+
+        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+        local goal = {Position = newWorldPos};
+        ts:Create(part, tweenInfo, goal):Play();
+    end;
 end;
 
 MoveEvent.OnServerEvent:Connect(function(player, startPos, endPos)
-    if type(startPos) ~= "table" or type(endPos) ~= "table" then return; end
-    if not (startPos.file and startPos.rank and endPos.file and endPos.rank) then return; end
-    if not isWithinBounds(startPos) or not isWithinBounds(endPos) then return; end
+    if type(startPos) ~= "table" or type(endPos) ~= "table" then return; end;
+    if not (startPos.file and startPos.rank and endPos.file and endPos.rank) then return; end;
+    if not isWithinBounds(startPos) or not isWithinBounds(endPos) then return; end;
 
     local piece = board[startPos.file][startPos.rank];
 
-    if not piece then return; end
-    if piece.color ~= currentTurn then return; end
+    if not piece then return; end;
+    if piece.color ~= currentTurn then return; end;
 
     if isValidMove(startPos, endPos, piece) then
         local targetPiece = board[endPos.file][endPos.rank];
@@ -192,8 +191,8 @@ MoveEvent.OnServerEvent:Connect(function(player, startPos, endPos)
                 local capPart = findTargetPart(capturedPawn.uniqueId);
                 if capPart then capPart:Destroy(); end;
                 board[capturedPawnPos.file][capturedPawnPos.rank] = nil;
-            end
-        end
+            end;
+        end;
 
         if piece.pieceType == "King" and math.abs(startPos.file - endPos.file) == 2 then
             isCastling = true;
@@ -206,13 +205,13 @@ MoveEvent.OnServerEvent:Connect(function(player, startPos, endPos)
                 board[rookStartFile][startPos.rank] = nil;
                 rook.hasMoved = true;
                 movePiecePhysical(rook.uniqueId, {file = rookEndFile, rank = startPos.rank});
-            end
-        end
+            end;
+        end;
 
         if targetPiece and not isEnPassant then
             local targetPart = findTargetPart(targetPiece.uniqueId);
             if targetPart then targetPart:Destroy(); end;
-        end
+        end;
 
         board[endPos.file][endPos.rank] = piece;
         board[startPos.file][startPos.rank] = nil;
@@ -228,12 +227,12 @@ MoveEvent.OnServerEvent:Connect(function(player, startPos, endPos)
         if piece.pieceType == "Pawn" then
             if (piece.color == "White" and endPos.rank == 8) or (piece.color == "Black" and endPos.rank == 1) then
                 piece.pieceType = "Queen";
-            end
-        end
+            end;
+        end;
 
         movePiecePhysical(piece.uniqueId, endPos);
 
         currentTurn = (currentTurn == "White") and "Black" or "White";
         print("New Turn: " .. currentTurn);
-    end
+    end;
 end);
